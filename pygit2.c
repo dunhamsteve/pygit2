@@ -48,7 +48,7 @@ typedef struct {
 OBJECT_STRUCT(Object, git_object, obj)
 OBJECT_STRUCT(Commit, git_commit, commit)
 OBJECT_STRUCT(Tree, git_tree, tree)
-OBJECT_STRUCT(Blob, git_object, blob)
+OBJECT_STRUCT(Blob, git_blob, blob)
 OBJECT_STRUCT(Index, git_index, index)
 
 typedef struct {
@@ -1068,9 +1068,26 @@ Blob_init(Blob *py_blob, PyObject *args, PyObject *kwds) {
     return Object_init_with_type((Object*)py_blob, GIT_OBJ_BLOB, args, kwds);
 }
 
+static int
+Blob_set_raw(Blob *self, PyObject *value) {
+    int err;
+    if (!PyString_Check(value)) {
+        PyErr_Format(PyExc_TypeError, "data must be str, not %.200s",
+                     value->ob_type->tp_name);
+        return -1;
+    }
+
+    err = git_blob_set_rawcontent(self->blob, PyString_AsString(value), PyString_Size(value)); // blob, buf, size
+    if (err != 0) {
+        Error_set(err);
+        return -1;
+    }
+    return 0;
+}
+
 /* TODO: libgit2 needs some way to set blob data. */
 static PyGetSetDef Blob_getseters[] = {
-    {"data", (getter)Object_read_raw, NULL, "raw data", NULL},
+    {"data", (getter)Object_read_raw, (setter)Blob_set_raw, "raw data", NULL},
     {NULL}
 };
 
